@@ -4,12 +4,26 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
+    public Controller controller;
     public GameObject neeedle;
     private float startPosition;
     private float endPosition;
     private float desiredPosition;
 
     public float vehicleSpeed;
+
+
+    private void Start()
+    {
+        controller = GameObject.FindGameObjectWithTag("Player").GetComponent<Controller>();
+    }
+
+    private void Update()
+    {
+        vehicleSpeed = controller.KPH;
+        UpdateNeedle();
+    }
+
 
     public void UpdateNeedle()
     {
