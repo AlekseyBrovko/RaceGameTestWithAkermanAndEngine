@@ -12,9 +12,10 @@ public class Controller : MonoBehaviour
     }
 
     [SerializeField] private DriveType driveType;
+    public GameObject wheelMeshes, wheelColliders;
     private InputManager inputManager;
     public WheelCollider[] wheels;
-    public GameObject[] wheelMeshes;
+    public GameObject[] wheelsMeshes;
     public float [] slip = new float[4];
     private Rigidbody rigidbody;
     private GameObject centerOfMass;
@@ -58,8 +59,8 @@ public class Controller : MonoBehaviour
         for (int i = 0; i < 4; i++)
         {
             wheels[i].GetWorldPose(out wheelPosition, out wheelRotation);
-            wheelMeshes[i].transform.position = wheelPosition;
-            wheelMeshes[i].transform.rotation = wheelRotation;
+            wheelsMeshes[i].transform.position = wheelPosition;
+            wheelsMeshes[i].transform.rotation = wheelRotation;
         }
     }
 
@@ -69,7 +70,20 @@ public class Controller : MonoBehaviour
         rigidbody = GetComponent<Rigidbody>();
         centerOfMass = GameObject.Find("CenterOfMass");
         rigidbody.centerOfMass = centerOfMass.transform.localPosition;
+        
+        wheelMeshes = GameObject.Find("WheelMeshes");
+        wheelsMeshes[0] = wheelMeshes.transform.GetChild(0).gameObject;
+        wheelsMeshes[1] = wheelMeshes.transform.GetChild(1).gameObject;
+        wheelsMeshes[2] = wheelMeshes.transform.GetChild(2).gameObject;
+        wheelsMeshes[3] = wheelMeshes.transform.GetChild(3).gameObject;
+
+        wheelColliders = GameObject.Find("WheelColliders");
+        wheels[0] = wheelColliders.transform.GetChild(0).gameObject.GetComponent<WheelCollider>();
+        wheels[1] = wheelColliders.transform.GetChild(1).gameObject.GetComponent<WheelCollider>();
+        wheels[2] = wheelColliders.transform.GetChild(2).gameObject.GetComponent<WheelCollider>();
+        wheels[3] = wheelColliders.transform.GetChild(3).gameObject.GetComponent<WheelCollider>();
     }
+
     private void MoveVehicle()
     {
         float totalDrive;
@@ -122,7 +136,7 @@ public class Controller : MonoBehaviour
 
     private void GetFriction()
     {
-        for(int i = 0; i < wheelMeshes.Length; i++)
+        for(int i = 0; i < wheelsMeshes.Length; i++)
         {
             WheelHit wheelHit;
             wheels[i].GetGroundHit(out wheelHit);
