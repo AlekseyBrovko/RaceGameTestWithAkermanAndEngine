@@ -4,13 +4,16 @@ using UnityEngine;
 
 public class Camera : MonoBehaviour
 {
-    public GameObject Player;
-    public GameObject cameraFollow;
+    private GameObject Player;
+    private GameObject cameraFollow;
+    private Controller controller;
+
     public float speed;
     private void Awake()
     {
         Player = GameObject.FindGameObjectWithTag("Player");
         cameraFollow = Player.transform.Find("CameraFollow").gameObject;
+        controller = Player.GetComponent<Controller>();
     }
 
     private void FixedUpdate()
@@ -20,6 +23,8 @@ public class Camera : MonoBehaviour
 
     public void Follow()
     {
+        speed = Mathf.Lerp(speed, controller.KPH / 2, Time.deltaTime);
+
         gameObject.transform.position = Vector3.Lerp(transform.position, cameraFollow.transform.position, speed * Time.deltaTime);
         gameObject.transform.LookAt(Player.gameObject.transform.position);
     }

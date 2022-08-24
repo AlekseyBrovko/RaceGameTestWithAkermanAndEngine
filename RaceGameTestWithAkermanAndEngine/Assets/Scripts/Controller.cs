@@ -16,12 +16,13 @@ public class Controller : MonoBehaviour
     private InputManager inputManager;
     private WheelCollider[] wheels = new WheelCollider[4];
     private GameObject[] wheelsMeshes = new GameObject[4];
-    public float [] slip = new float[4];
+    public float[] slip = new float[4];
     private Rigidbody rigidbody;
     private GameObject centerOfMass;
+
     public float KPH;
     public float breakPower = 1000;
-    public float radius = 6;
+    public float radius = 6;            //для формулы акермана, радиус разворота
     public float downForceValue = 50f;
     public float motorTorque = 200f;
     public float steeringMax = 4;
@@ -70,7 +71,7 @@ public class Controller : MonoBehaviour
         rigidbody = GetComponent<Rigidbody>();
         centerOfMass = GameObject.Find("CenterOfMass");
         rigidbody.centerOfMass = centerOfMass.transform.localPosition;
-        
+
         wheelMeshes = GameObject.Find("WheelMeshes");
         wheelsMeshes[0] = wheelMeshes.transform.GetChild(0).gameObject;
         wheelsMeshes[1] = wheelMeshes.transform.GetChild(1).gameObject;
@@ -123,9 +124,22 @@ public class Controller : MonoBehaviour
 
     private void SteerVehicle()
     {
-        for (int i = 0; i < wheels.Length - 2; i++)
+        //годнота подъехала, формула акермана для рулевых колёс
+        if (inputManager.horizontal > 0)
         {
-            wheels[i].steerAngle = inputManager.horizontal * steeringMax;
+            //rear track size is set to 1.5f        wheel base has been set to 2.55f
+            wheels[0].steerAngle = Mathf.Rad2Deg * Mathf.Atan(2.55f / (radius + (1.5f / 2))) * inputManager.horizontal;
+            wheels[1].steerAngle = Mathf.Rad2Deg * Mathf.Atan(2.55f / (radius - (1.5f / 2))) * inputManager.horizontal;
+        }
+        else if (inputManager.horizontal < 0)
+        {
+            wheels[0].steerAngle = Mathf.Rad2Deg * Mathf.Atan(2.55f / (radius - (1.5f / 2))) * inputManager.horizontal;
+            wheels[1].steerAngle = Mathf.Rad2Deg * Mathf.Atan(2.55f / (radius + (1.5f / 2))) * inputManager.horizontal;
+        }
+        else
+        {
+            wheels[0].steerAngle = 0;
+            wheels[1].steerAngle = 0;
         }
     }
 
@@ -136,7 +150,7 @@ public class Controller : MonoBehaviour
 
     private void GetFriction()
     {
-        for(int i = 0; i < wheelsMeshes.Length; i++)
+        for (int i = 0; i < wheelsMeshes.Length; i++)
         {
             WheelHit wheelHit;
             wheels[i].GetGroundHit(out wheelHit);
