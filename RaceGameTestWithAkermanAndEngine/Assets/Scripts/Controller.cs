@@ -14,8 +14,8 @@ public class Controller : MonoBehaviour
     [SerializeField] private DriveType driveType;
     public GameObject wheelMeshes, wheelColliders;
     private InputManager inputManager;
-    public WheelCollider[] wheels;
-    public GameObject[] wheelsMeshes;
+    private WheelCollider[] wheels = new WheelCollider[4];
+    private GameObject[] wheelsMeshes = new GameObject[4];
     public float [] slip = new float[4];
     private Rigidbody rigidbody;
     private GameObject centerOfMass;
