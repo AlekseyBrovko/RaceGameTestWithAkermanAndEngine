@@ -26,6 +26,13 @@ public class Controller : MonoBehaviour
     public float downForceValue = 50f;
     public float motorTorque = 200f;
     public float steeringMax = 4;
+    public float tempo;                 //угол дрифта
+    public float handBrakeFrictionMultiplier = 2f;
+    public WheelFrictionCurve sideWaysFriction;
+    public WheelFrictionCurve forwardFriction;
+    public float handBrakeFriction;
+    private float frictionMultiplier = 3f;
+    public float currSpeed;
 
     #region Stats
     private float VehicleSpeed;
@@ -48,6 +55,8 @@ public class Controller : MonoBehaviour
         MoveVehicle();
         SteerVehicle();
         GetFriction();
+
+        Drifting();
 
         Stats();
     }
@@ -148,8 +157,91 @@ public class Controller : MonoBehaviour
         rigidbody.AddForce(-transform.up * downForceValue * rigidbody.velocity.magnitude);
     }
 
+    private void Drifting()
+    {
+        currSpeed = KPH;
+        if (inputManager.handBrake)
+        {
+            sideWaysFriction = wheels[0].sidewaysFriction;
+            forwardFriction = wheels[0].forwardFriction;
+
+            float velocity = 0;
+            sideWaysFriction.extremumValue = sideWaysFriction.asymptoteValue = Mathf.SmoothDamp(sideWaysFriction.asymptoteValue, handBrakeFriction, ref velocity, 0.05f * Time.deltaTime);
+            forwardFriction.extremumValue = forwardFriction.asymptoteValue = Mathf.SmoothDamp(forwardFriction.asymptoteValue, handBrakeFriction, ref velocity, 0.05f * Time.deltaTime);
+
+            for (int i = 2; i < 4; i++)
+            {
+                wheels[i].sidewaysFriction = sideWaysFriction;
+                wheels[i].forwardFriction = forwardFriction;
+            }
+
+            sideWaysFriction.extremumValue = sideWaysFriction.asymptoteValue = 1.5f;
+            forwardFriction.extremumValue = forwardFriction.asymptoteValue = 1.5f;
+
+            for (int i = 0; i < 2; i++)
+            {
+                wheels[i].sidewaysFriction = sideWaysFriction;
+                wheels[i].forwardFriction = forwardFriction;
+            }
+
+            //CarManager.spining = (inputManager.handBrake) ? true : false;
+
+
+
+            for (int i = 2; i < 4; i++)
+            {
+                WheelHit wheelHit;
+
+                wheels[i].GetGroundHit(out wheelHit);
+
+                if (wheelHit.sidewaysSlip < 0)
+                {
+                    tempo = (1 + -inputManager.horizontal) * Mathf.Abs(wheelHit.sidewaysSlip * handBrakeFrictionMultiplier);
+                }
+                if (wheelHit.sidewaysSlip < 0.5f)
+                {
+                    tempo = 0.5f;
+                }
+
+                if (wheelHit.sidewaysSlip > 0)
+                {
+                    tempo = (1 + inputManager.horizontal) * Mathf.Abs(wheelHit.sidewaysSlip * handBrakeFrictionMultiplier);
+                }
+                if (wheelHit.sidewaysSlip > 0.5f)
+                {
+                    tempo = 0.5f;
+                }
+                if (wheelHit.sidewaysSlip < 0.99f || wheelHit.sidewaysSlip > 0.99f)
+                {
+                    velocity = 0;
+                    handBrakeFriction = Mathf.SmoothDamp(handBrakeFriction, tempo * 3, ref velocity, 0.1f * Time.deltaTime);
+                }
+                else
+                {
+                    handBrakeFriction = tempo;
+                }
+            }
+        }
+        if(!inputManager.handBrake)
+        {
+            forwardFriction = wheels[0].forwardFriction;
+            sideWaysFriction = wheels[0].sidewaysFriction;
+            
+            forwardFriction.extremumValue = forwardFriction.asymptoteValue = ((currSpeed * frictionMultiplier) / 300) + 1;
+            sideWaysFriction.extremumValue = sideWaysFriction.asymptoteValue = ((currSpeed * frictionMultiplier) / 300) + 1;
+            
+            for (int i = 0; i < 4; i++)
+            {
+                wheels[i].sidewaysFriction = sideWaysFriction;
+                wheels[i].forwardFriction = forwardFriction;
+            }
+        }
+    }
+
     private void GetFriction()
     {
+        //TODO сделать и для продольного и поперечного скольжения
+
         for (int i = 0; i < wheelsMeshes.Length; i++)
         {
             WheelHit wheelHit;
