@@ -21,37 +21,37 @@ public class Controller : MonoBehaviour
     [SerializeField] private GearBoxType gearBoxType;
 
     public GameObject wheelMeshes, wheelColliders;
-    public AnimationCurve enginePower;
-    public float[] Gears;
-    public int gearNum = 0;
+    public AnimationCurve enginePower;                          //кривая мощности двигателя
+    public float[] Gears;                                       //массив шестеренок с их передаточными числами
+    public int gearNum = 0;                                     //текущая передача
     public float smoothTime = 0.01f;
     private InputManager inputManager;
-    private WheelCollider[] wheels = new WheelCollider[4];
-    private GameObject[] wheelsMeshes = new GameObject[4];
-    public float[] forwardSlip = new float[4];
-    public float[] sideSlip = new float[4];
+    private WheelCollider[] wheels = new WheelCollider[4];      //массив колайдеров
+    private GameObject[] wheelsMeshes = new GameObject[4];      //массив мешей колёс
+    public float[] forwardSlip = new float[4];                  //статистика скольжения продольного
+    public float[] sideSlip = new float[4];                     //статистика скольжения поперечного
     private Rigidbody rigidbody;
-    private GameObject centerOfMass;
+    private GameObject centerOfMass;                
 
-    public float KPH;
-    public float breakPower = 1000;
-    public float radius = 6;            //для формулы акермана, радиус разворота
-    public float downForceValue = 50f;
-    public float motorTorque = 200f;
-    public float steeringMax = 4;
-    public float tempo;                 //угол дрифта
-    public float handBrakeFrictionMultiplier = 2f;
-    public WheelFrictionCurve sideWaysFriction;
-    public WheelFrictionCurve forwardFriction;
-    public float handBrakeFriction;
-    private float frictionMultiplier = 3f;
-    public float currSpeed;
-    public float totalPower;
-    public float engineRPM;
-    public float wheelsRpm;
+    public float KPH;                                           //статистика километров в час
+    public float breakPower = 1000;                             //сила торможения
+    public float radius = 6;                                    //для формулы акермана, радиус разворота
+    public float downForceValue = 50f;                          //прижимная сила
+    //public float motorTorque = 200f;
+    //public float steeringMax = 4;
+    public float tempo;                                         //угол дрифта
+    public float handBrakeFrictionMultiplier = 2f;              //для дрифта
+    public WheelFrictionCurve sideWaysFriction;                 //для дрифта
+    public WheelFrictionCurve forwardFriction;                  //для дрифта
+    public float handBrakeFriction;                             //для дрифта
+    private float frictionMultiplier = 3f;                      //для дрифта
+    private float currSpeed;                                    //текущая скорость                
+    public float totalPower;                                    //переменная для рассчета мощности            
+    public float engineRPM;                                     //тахометр, обороты двигателя текущие
+    public float wheelsRpm;                                     
     public float maxEngineRpm = 5000f;   //для рассчета мощности
-    public float maxGearBoxRpm = 4400f;     //нужно для коробки передач
-    public float minGearBoxRpm = 3000f;     //нужно для коробки передач
+    public float maxGearBoxRpm = 5000f;     //нужно для коробки передач
+    public float minGearBoxRpm = 2500f;     //нужно для коробки передач
     public bool reverce;
 
     #region Stats
@@ -366,6 +366,7 @@ public class Controller : MonoBehaviour
             if (engineRPM > maxGearBoxRpm && gearNum < Gears.Length - 1)
             {
                 gearNum++;
+                //вообще спорно костыльная фигня щас будет
             }
             if (engineRPM < minGearBoxRpm && gearNum > 0)
             {
@@ -374,11 +375,11 @@ public class Controller : MonoBehaviour
         }
         else if (gearBoxType == GearBoxType.Manual)
         {
-            if (Input.GetKeyDown(KeyCode.E))
+            if (Input.GetKeyDown(KeyCode.E) && gearNum < Gears.Length - 1)
             {
                 gearNum++;
             }
-            if (Input.GetKeyDown(KeyCode.Q))
+            if (Input.GetKeyDown(KeyCode.Q) && gearNum > 0)
             {
                 gearNum--;
             }
