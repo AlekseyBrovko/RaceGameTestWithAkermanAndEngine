@@ -10,8 +10,15 @@ public class Controller : MonoBehaviour
         RearWheelDrive,
         AllWheelDrive
     }
-
     [SerializeField] private DriveType driveType;
+
+    internal enum GearBoxType
+    {
+        Manual,
+        Automatic
+    }
+    [SerializeField] private GearBoxType gearBoxType;
+
     public GameObject wheelMeshes, wheelColliders;
     public AnimationCurve enginePower;
     public float[] Gears;
@@ -40,6 +47,10 @@ public class Controller : MonoBehaviour
     public float totalPower;
     public float engineRPM;
     public float wheelsRpm;
+    public float maxEngineRpm = 5000f;   //для рассчета мощности
+    public float maxGearBoxRpm = 4400f;     //нужно для коробки передач
+    public float minGearBoxRpm = 3000f;     //нужно для коробки передач
+    public bool reverce;
 
     #region Stats
     private float VehicleSpeed;
@@ -56,7 +67,7 @@ public class Controller : MonoBehaviour
 
     private void Update()
     {
-        ManualShifter();
+        GearBox();
     }
 
     private void FixedUpdate()
@@ -68,8 +79,9 @@ public class Controller : MonoBehaviour
         GetFriction();
         CalculateEnginePower();
 
+        AirResistanceForce();
 
-
+        Break();
         Drifting();
 
         Stats();
@@ -142,6 +154,15 @@ public class Controller : MonoBehaviour
         else
         {
             wheels[2].brakeTorque = wheels[3].brakeTorque = 0;
+        }
+
+        //TODO ТУТ БУЛЕВА ЧТО ЕСЛИ ВПЕРЕД, ТО тормозим 
+        if (inputManager.vertical < 0 && !reverce)
+        {
+            foreach(var wheel in wheels)
+            {
+                wheel.brakeTorque = breakPower;
+            }
         }
     }
 
@@ -277,12 +298,23 @@ public class Controller : MonoBehaviour
     {
         WheelRPM();
         //totalPower = enginePower.Evaluate(engineRPM) * (Gears[gearNum]) * inputManager.vertical;
+        if(inputManager.vertical > 0)
+        {
+            totalPower = enginePower.Evaluate(engineRPM) * 3.6f * inputManager.vertical;
+        }
+        
 
-        totalPower = enginePower.Evaluate(engineRPM) * 3.6f * inputManager.vertical;
         float velocity = 0.0f;
 
+        if (inputManager.vertical != 0)
+        {
+            rigidbody.drag = 0.005f;
+        }
+        if (inputManager.vertical == 0)
+        {
+            rigidbody.drag = 0.1f;
+        }
 
-        float maxEngineRpm = 5000;
 
         if (engineRPM >= maxEngineRpm)
         {
@@ -304,17 +336,77 @@ public class Controller : MonoBehaviour
             R++;
         }
         wheelsRpm = (R != 0) ? sum / R : 0;
+
+        //????
+        //if (wheelsRpm < 0 && !reverce) reverce = true;
+        //if (wheelsRpm > 0 && reverce) reverce = false;
+
     }
 
-    private void ManualShifter()
+    private void GearBox()
     {
-        if (Input.GetKeyDown(KeyCode.E))
+        if (!IsGrounded()) return;
+        if (gearBoxType == GearBoxType.Automatic)
         {
-            gearNum++;
+            if (engineRPM > maxGearBoxRpm && gearNum < Gears.Length - 1)
+            {
+                gearNum++;
+            }
+            if (engineRPM < minGearBoxRpm && gearNum > 0)
+            {
+                gearNum--;
+            }
         }
-        if (Input.GetKeyDown(KeyCode.Q))
+        else if (gearBoxType == GearBoxType.Manual)
         {
-            gearNum--;
+            if (Input.GetKeyDown(KeyCode.E))
+            {
+                gearNum++;
+            }
+            if (Input.GetKeyDown(KeyCode.Q))
+            {
+                gearNum--;
+            }
+        }
+    }
+
+    private void AirResistanceForce()
+    {
+        var v = rigidbody.velocity.magnitude;
+        var p = 1.225f;
+        var cd = 0.47f;
+        var s = 2f;     //Pi*R*R
+
+        var direction = -rigidbody.velocity.normalized;
+        var forceAmount = (p * v * v * s * cd) / 2f;
+        rigidbody.AddForce(direction * forceAmount * Time.deltaTime);
+    }
+
+    private void MotorBrake()
+    {
+        if (inputManager.vertical == 0 && (KPH <= 10 || KPH >= -10))
+        {
+            breakPower = 10f;
+        }
+    }
+
+    private bool IsGrounded()
+    {
+        if (wheels[0].isGrounded && wheels[1].isGrounded && wheels[2].isGrounded && wheels[3].isGrounded)
+            return true;
+        else
+            return false;
+    }
+
+    public void Break()
+    {
+        if (inputManager.vertical < 0)
+        {
+            breakPower = (KPH >= 10) ? 100000 : 0;
+        }
+        else
+        {
+            breakPower = 0;
         }
     }
 }
