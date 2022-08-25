@@ -157,13 +157,20 @@ public class Controller : MonoBehaviour
         }
 
         //TODO ТУТ БУЛЕВА ЧТО ЕСЛИ ВПЕРЕД, ТО тормозим 
-        if (inputManager.vertical < 0 && !reverce)
+        /*if (inputManager.vertical < 0 && !reverce)
         {
-            foreach(var wheel in wheels)
+            foreach (var wheel in wheels)
             {
                 wheel.brakeTorque = breakPower;
             }
         }
+        else
+        {
+            foreach (var wheel in wheels)
+            {
+                wheel.brakeTorque = 0;
+            }
+        }*/
     }
 
     private void SteerVehicle()
@@ -298,11 +305,11 @@ public class Controller : MonoBehaviour
     {
         WheelRPM();
         //totalPower = enginePower.Evaluate(engineRPM) * (Gears[gearNum]) * inputManager.vertical;
-        if(inputManager.vertical > 0)
+        if (inputManager.vertical > 0)
         {
             totalPower = enginePower.Evaluate(engineRPM) * 3.6f * inputManager.vertical;
         }
-        
+
 
         float velocity = 0.0f;
 
@@ -388,6 +395,10 @@ public class Controller : MonoBehaviour
         {
             breakPower = 10f;
         }
+        else
+        {
+            breakPower = 0f;
+        }
     }
 
     private bool IsGrounded()
@@ -400,9 +411,9 @@ public class Controller : MonoBehaviour
 
     public void Break()
     {
-        if (inputManager.vertical < 0)
+        if (inputManager.vertical < 0 && !reverce)
         {
-            breakPower = (KPH >= 10) ? 100000 : 0;
+            breakPower = (KPH >= 10) ? 1000 : 100;
         }
         else
         {
