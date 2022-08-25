@@ -286,7 +286,6 @@ public class Controller : MonoBehaviour
         {
             engineRPM = Mathf.SmoothDamp(engineRPM, 1000 + (Mathf.Abs(wheelsRpm) * 3.6f * (Gears[gearNum])), ref velocity, smoothTime);      //3,6 это число редуктора моста
         }
-
     }
 
     private void WheelRPM()
