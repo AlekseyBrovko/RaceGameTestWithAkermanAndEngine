@@ -351,6 +351,10 @@ public class CarController :MonoBehaviour
 				}
 
 				//If the rpm of the wheel is less than the max rpm engine * current ratio, then apply the current torque for wheel, else not torque for wheel.
+
+
+				
+				//ЕБАТЬ ВОТ ОНО РЕШЕНИЕ ТО!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				float maxWheelRPM = AllGearsRatio[CurrentGearIndex] * EngineRPM;
 				for (int i = FirstDriveWheel; i <= LastDriveWheel; i++)
 				{
