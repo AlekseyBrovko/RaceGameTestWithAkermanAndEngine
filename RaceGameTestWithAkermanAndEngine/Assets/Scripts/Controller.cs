@@ -54,6 +54,10 @@ public class Controller : MonoBehaviour
         GetObjectsOnStart();
     }
 
+    private void Update()
+    {
+        ManualShifter();
+    }
 
     private void FixedUpdate()
     {
@@ -63,6 +67,8 @@ public class Controller : MonoBehaviour
         SteerVehicle();
         GetFriction();
         CalculateEnginePower();
+
+
 
         Drifting();
 
@@ -298,5 +304,17 @@ public class Controller : MonoBehaviour
             R++;
         }
         wheelsRpm = (R != 0) ? sum / R : 0;
+    }
+
+    private void ManualShifter()
+    {
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            gearNum++;
+        }
+        if (Input.GetKeyDown(KeyCode.Q))
+        {
+            gearNum--;
+        }
     }
 }
