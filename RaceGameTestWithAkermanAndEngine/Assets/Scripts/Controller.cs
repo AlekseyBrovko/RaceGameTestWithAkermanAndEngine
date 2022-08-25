@@ -13,6 +13,10 @@ public class Controller : MonoBehaviour
 
     [SerializeField] private DriveType driveType;
     public GameObject wheelMeshes, wheelColliders;
+    public AnimationCurve enginePower;
+    public float[] Gears;
+    public int gearNum = 0;
+    public float smoothTime = 0.01f;
     private InputManager inputManager;
     private WheelCollider[] wheels = new WheelCollider[4];
     private GameObject[] wheelsMeshes = new GameObject[4];
@@ -33,6 +37,9 @@ public class Controller : MonoBehaviour
     public float handBrakeFriction;
     private float frictionMultiplier = 3f;
     public float currSpeed;
+    public float totalPower;
+    public float engineRPM;
+    public float wheelsRpm;
 
     #region Stats
     private float VehicleSpeed;
@@ -55,6 +62,7 @@ public class Controller : MonoBehaviour
         MoveVehicle();
         SteerVehicle();
         GetFriction();
+        CalculateEnginePower();
 
         Drifting();
 
@@ -101,22 +109,22 @@ public class Controller : MonoBehaviour
         if (driveType == DriveType.AllWheelDrive)
         {
             for (int i = 0; i < wheels.Length; i++)
-            {
-                wheels[i].motorTorque = inputManager.vertical * (motorTorque / 4);
+            {                                                   //totalPower/4
+                wheels[i].motorTorque = inputManager.vertical * (totalPower / 4);
             }
         }
         else if (driveType == DriveType.RearWheelDrive)
         {
             for (int i = 2; i < wheels.Length; i++)
             {
-                wheels[i].motorTorque = inputManager.vertical * (motorTorque / 2) * Time.fixedTime;
+                wheels[i].motorTorque = inputManager.vertical * (totalPower / 2) * Time.fixedTime;
             }
         }
         else if (driveType == DriveType.FrontWheelDrive)
         {
             for (int i = 0; i < wheels.Length - 2; i++)
             {
-                wheels[i].motorTorque = inputManager.vertical * (motorTorque / 2);
+                wheels[i].motorTorque = inputManager.vertical * (totalPower / 2);
             }
         }
         KPH = rigidbody.velocity.magnitude * 3.6f;
@@ -222,14 +230,14 @@ public class Controller : MonoBehaviour
                 }
             }
         }
-        if(!inputManager.handBrake)
+        if (!inputManager.handBrake)
         {
             forwardFriction = wheels[0].forwardFriction;
             sideWaysFriction = wheels[0].sidewaysFriction;
-            
+
             forwardFriction.extremumValue = forwardFriction.asymptoteValue = ((currSpeed * frictionMultiplier) / 300) + 1;
             sideWaysFriction.extremumValue = sideWaysFriction.asymptoteValue = ((currSpeed * frictionMultiplier) / 300) + 1;
-            
+
             for (int i = 0; i < 4; i++)
             {
                 wheels[i].sidewaysFriction = sideWaysFriction;
@@ -257,5 +265,39 @@ public class Controller : MonoBehaviour
         RF_rpm = Mathf.CeilToInt(wheels[1].rpm);
         LB_rpm = Mathf.CeilToInt(wheels[2].rpm);
         RB_rpm = Mathf.CeilToInt(wheels[3].rpm);
+    }
+
+    private void CalculateEnginePower()
+    {
+        WheelRPM();
+        //totalPower = enginePower.Evaluate(engineRPM) * (Gears[gearNum]) * inputManager.vertical;
+
+        totalPower = enginePower.Evaluate(engineRPM) * 3.6f * inputManager.vertical;
+        float velocity = 0.0f;
+
+
+        float maxEngineRpm = 5000;
+
+        if (engineRPM >= maxEngineRpm)
+        {
+            engineRPM = Mathf.SmoothDamp(engineRPM, maxEngineRpm - 500, ref velocity, 0.05f);
+        }
+        else
+        {
+            engineRPM = Mathf.SmoothDamp(engineRPM, 1000 + (Mathf.Abs(wheelsRpm) * 3.6f * (Gears[gearNum])), ref velocity, smoothTime);      //3,6 это число редуктора моста
+        }
+
+    }
+
+    private void WheelRPM()
+    {
+        float sum = 0;
+        int R = 0;
+        for (int i = 0; i < 4; i++)
+        {
+            sum += wheels[i].rpm;
+            R++;
+        }
+        wheelsRpm = (R != 0) ? sum / R : 0;
     }
 }
