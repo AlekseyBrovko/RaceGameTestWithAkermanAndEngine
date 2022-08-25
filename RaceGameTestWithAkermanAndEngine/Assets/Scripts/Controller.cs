@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 
 public class Controller : MonoBehaviour
@@ -27,7 +28,8 @@ public class Controller : MonoBehaviour
     private InputManager inputManager;
     private WheelCollider[] wheels = new WheelCollider[4];
     private GameObject[] wheelsMeshes = new GameObject[4];
-    public float[] slip = new float[4];
+    public float[] forwardSlip = new float[4];
+    public float[] sideSlip = new float[4];
     private Rigidbody rigidbody;
     private GameObject centerOfMass;
 
@@ -281,14 +283,20 @@ public class Controller : MonoBehaviour
     }
 
     private void GetFriction()
-    {
-        //TODO сделать и для продольного и поперечного скольжения
-
+    {   
+        //из этих значений можно брать скольжение фронтальное и боковое
+        //нужно, если есть фронтальное скольжение как то его решать
         for (int i = 0; i < wheelsMeshes.Length; i++)
         {
             WheelHit wheelHit;
             wheels[i].GetGroundHit(out wheelHit);
-            slip[i] = wheelHit.forwardSlip;
+            forwardSlip[i] = (float)Math.Round(wheelHit.forwardSlip, 2);
+        }
+        for (int i = 0; i < wheelsMeshes.Length; i++)
+        {
+            WheelHit wheelHit;
+            wheels[i].GetGroundHit(out wheelHit);
+            sideSlip[i] = (float)Math.Round(wheelHit.sidewaysSlip, 2);
         }
     }
 
