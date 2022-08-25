@@ -367,10 +367,12 @@ public class Controller : MonoBehaviour
             {
                 gearNum++;
                 //вообще спорно костыльная фигня щас будет
+                SwitchingTheGearBox();
             }
             if (engineRPM < minGearBoxRpm && gearNum > 0)
             {
                 gearNum--;
+                SwitchingTheGearBox();
             }
         }
         else if (gearBoxType == GearBoxType.Manual)
@@ -378,10 +380,12 @@ public class Controller : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.E) && gearNum < Gears.Length - 1)
             {
                 gearNum++;
+                SwitchingTheGearBox();
             }
             if (Input.GetKeyDown(KeyCode.Q) && gearNum > 0)
             {
                 gearNum--;
+                SwitchingTheGearBox();
             }
         }
     }
@@ -428,5 +432,23 @@ public class Controller : MonoBehaviour
         {
             breakPower = 0;
         }
+    }
+
+    private void SwitchingTheGearBox()
+    {
+        StartCoroutine(SwitchingTheGearBoxCor());
+    }
+
+    IEnumerator SwitchingTheGearBoxCor()
+    {
+        float switchingBreak = 5000f;
+        float switchngGearBoxTimer = 0.5f;
+        wheels[2].motorTorque = 0;
+        wheels[3].motorTorque = 0;
+        wheels[2].brakeTorque = switchingBreak;
+        wheels[3].brakeTorque = switchingBreak;
+        yield return new WaitForSeconds(switchngGearBoxTimer);
+        wheels[2].brakeTorque = 0;
+        wheels[3].brakeTorque = 0;
     }
 }
