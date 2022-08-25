@@ -31,7 +31,7 @@ public class Controller : MonoBehaviour
     public float[] forwardSlip = new float[4];                  //статистика скольжения продольного
     public float[] sideSlip = new float[4];                     //статистика скольжения поперечного
     private Rigidbody rigidbody;
-    private GameObject centerOfMass;                
+    private GameObject centerOfMass;
 
     public float KPH;                                           //статистика километров в час
     public float breakPower = 1000;                             //сила торможения
@@ -48,7 +48,7 @@ public class Controller : MonoBehaviour
     private float currSpeed;                                    //текущая скорость                
     public float totalPower;                                    //переменная для рассчета мощности            
     public float engineRPM;                                     //тахометр, обороты двигателя текущие
-    public float wheelsRpm;                                     
+    public float wheelsRpm;
     public float maxEngineRpm = 5000f;   //для рассчета мощности
     public float maxGearBoxRpm = 5000f;     //нужно для коробки передач
     public float minGearBoxRpm = 2500f;     //нужно для коробки передач
@@ -76,10 +76,12 @@ public class Controller : MonoBehaviour
     {
         AddDownForce();
         AnimateWheels();
-        MoveVehicle();
+
         SteerVehicle();
         GetFriction();
         CalculateEnginePower();
+
+        MoveVehicle();
 
         AirResistanceForce();
 
@@ -87,6 +89,8 @@ public class Controller : MonoBehaviour
         Drifting();
 
         Stats();
+
+        //CrutchesNormalizerRPM();
     }
 
     public void AnimateWheels()
@@ -283,7 +287,7 @@ public class Controller : MonoBehaviour
     }
 
     private void GetFriction()
-    {   
+    {
         //из этих значений можно брать скольжение фронтальное и боковое
         //нужно, если есть фронтальное скольжение как то его решать
         for (int i = 0; i < wheelsMeshes.Length; i++)
@@ -365,27 +369,26 @@ public class Controller : MonoBehaviour
         {
             if (engineRPM > maxGearBoxRpm && gearNum < Gears.Length - 1)
             {
+                //if(ForwardSliding()) return;
                 gearNum++;
-                //вообще спорно костыльная фигня щас будет
-                SwitchingTheGearBox();
             }
             if (engineRPM < minGearBoxRpm && gearNum > 0)
             {
+                //if(ForwardSliding()) return;
                 gearNum--;
-                SwitchingTheGearBox();
             }
         }
         else if (gearBoxType == GearBoxType.Manual)
         {
             if (Input.GetKeyDown(KeyCode.E) && gearNum < Gears.Length - 1)
             {
+                //if(ForwardSliding()) return;
                 gearNum++;
-                SwitchingTheGearBox();
             }
             if (Input.GetKeyDown(KeyCode.Q) && gearNum > 0)
             {
+                //if(ForwardSliding()) return;
                 gearNum--;
-                SwitchingTheGearBox();
             }
         }
     }
@@ -434,6 +437,11 @@ public class Controller : MonoBehaviour
         }
     }
 
+
+    private void ForwardSlidingValue()
+    {
+
+    }
     private void SwitchingTheGearBox()
     {
         StartCoroutine(SwitchingTheGearBoxCor());
@@ -442,7 +450,7 @@ public class Controller : MonoBehaviour
     IEnumerator SwitchingTheGearBoxCor()
     {
         float switchingBreak = 5000f;
-        float switchngGearBoxTimer = 0.5f;
+        float switchngGearBoxTimer = 1f;
         wheels[2].motorTorque = 0;
         wheels[3].motorTorque = 0;
         wheels[2].brakeTorque = switchingBreak;
@@ -450,5 +458,31 @@ public class Controller : MonoBehaviour
         yield return new WaitForSeconds(switchngGearBoxTimer);
         wheels[2].brakeTorque = 0;
         wheels[3].brakeTorque = 0;
+    }
+
+    private void CrutchesNormalizerRPM()
+    {
+        if (ForwardSliding())
+        {
+            engineRPM = Mathf.Lerp(engineRPM, engineRPM / 2, 0.5f);
+            Debug.Log("СКОЛЬЗИМ ЕБАТЬ");
+        }
+    }
+
+    private bool ForwardSliding()
+    {
+        if (wheels[0].rpm / wheels[2].rpm < 0.85 && wheels[1].rpm / wheels[3].rpm < 0.85)
+            return true;
+        else
+            return false;
+    }
+
+    private void GetSpeedGearsValues()
+    {
+        float[] maxSpeedOnGears = new float[wheels.Length];
+        for (int i = 0; i < wheels.Length; i++)
+        {
+            //здесь рассчитать максимальную скорость на каждой передаче
+        }
     }
 }
