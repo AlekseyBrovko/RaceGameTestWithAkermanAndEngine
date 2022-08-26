@@ -20,20 +20,18 @@ public class Controller : MonoBehaviour
     }
     [SerializeField] private GearBoxType gearBoxType;
 
+    private Rigidbody rigidbody;
+    private InputManager inputManager;
+    private WheelCollider[] wheels = new WheelCollider[4];      //массив колайдеров
+    private GameObject[] wheelsMeshes = new GameObject[4];      //массив мешей колёс
+    private GameObject centerOfMass;
+    
     public GameObject wheelMeshes, wheelColliders;
     public AnimationCurve enginePower;                          //кривая мощности двигателя
     public float[] Gears;                                       //массив шестеренок с их передаточными числами
     public int gearNum = 0;                                     //текущая передача
     public float smoothTime = 0.01f;
-    private InputManager inputManager;
-    private WheelCollider[] wheels = new WheelCollider[4];      //массив колайдеров
-    private GameObject[] wheelsMeshes = new GameObject[4];      //массив мешей колёс
-    public float[] forwardSlip = new float[4];                  //статистика скольжения продольного
-    public float[] sideSlip = new float[4];                     //статистика скольжения поперечного
-    private Rigidbody rigidbody;
-    private GameObject centerOfMass;
-
-    public float KPH;                                           //статистика километров в час
+    
     public float breakPower = 1000;                             //сила торможения
     public float radius = 6;                                    //для формулы акермана, радиус разворота
     public float downForceValue = 50f;                          //прижимная сила
@@ -49,17 +47,24 @@ public class Controller : MonoBehaviour
     public float totalPower;                                    //переменная для рассчета мощности            
     public float engineRPM;                                     //тахометр, обороты двигателя текущие
     public float wheelsRpm;
-    public float maxEngineRpm = 5000f;   //для рассчета мощности
+    public float maxEngineRpm = 5000f;      //для рассчета мощности
     public float maxGearBoxRpm = 5000f;     //нужно для коробки передач
     public float minGearBoxRpm = 2500f;     //нужно для коробки передач
     public bool reverce;
+    public bool forwardIsSlip;
+    private float MaxForwardSlipToBlockChangeGear = 0.5f;
 
     #region Stats
     private float VehicleSpeed;
-    private float LF_rpm;
+    private float LF_rpm;                                       //обороты колёс
     private float RF_rpm;
     private float LB_rpm;
     private float RB_rpm;
+
+    public float[] forwardSlip = new float[4];                  //статистика скольжения продольного
+    public float[] sideSlip = new float[4];                     //статистика скольжения поперечного
+
+    public float KPH;                                           //статистика километров в час
     #endregion
 
     private void Start()
@@ -288,6 +293,7 @@ public class Controller : MonoBehaviour
 
     private void GetFriction()
     {
+        forwardIsSlip = false;
         //из этих значений можно брать скольжение фронтальное и боковое
         //нужно, если есть фронтальное скольжение как то его решать
         for (int i = 0; i < wheelsMeshes.Length; i++)
@@ -295,6 +301,11 @@ public class Controller : MonoBehaviour
             WheelHit wheelHit;
             wheels[i].GetGroundHit(out wheelHit);
             forwardSlip[i] = (float)Math.Round(wheelHit.forwardSlip, 2);
+
+            if (forwardSlip[i] > MaxForwardSlipToBlockChangeGear)
+            {
+                forwardIsSlip = true;
+            }
         }
         for (int i = 0; i < wheelsMeshes.Length; i++)
         {
@@ -302,6 +313,8 @@ public class Controller : MonoBehaviour
             wheels[i].GetGroundHit(out wheelHit);
             sideSlip[i] = (float)Math.Round(wheelHit.sidewaysSlip, 2);
         }
+
+
     }
 
     private void Stats()
@@ -367,7 +380,7 @@ public class Controller : MonoBehaviour
         if (!IsGrounded()) return;
         if (gearBoxType == GearBoxType.Automatic)
         {
-            if (engineRPM > maxGearBoxRpm && gearNum < Gears.Length - 1)
+            if (engineRPM > maxGearBoxRpm && gearNum < Gears.Length - 1 && !forwardIsSlip)
             {
                 //if(ForwardSliding()) return;
                 gearNum++;
