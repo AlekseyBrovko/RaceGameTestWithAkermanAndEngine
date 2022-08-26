@@ -25,13 +25,13 @@ public class Controller : MonoBehaviour
     private WheelCollider[] wheels = new WheelCollider[4];      //массив колайдеров
     private GameObject[] wheelsMeshes = new GameObject[4];      //массив мешей колёс
     private GameObject centerOfMass;
-    
+
     public GameObject wheelMeshes, wheelColliders;
     public AnimationCurve enginePower;                          //кривая мощности двигателя
     public float[] Gears;                                       //массив шестеренок с их передаточными числами
     public int gearNum = 0;                                     //текущая передача
     public float smoothTime = 0.01f;
-    
+
     public float breakPower = 1000;                             //сила торможения
     public float radius = 6;                                    //для формулы акермана, радиус разворота
     public float downForceValue = 50f;                          //прижимная сила
@@ -48,11 +48,12 @@ public class Controller : MonoBehaviour
     public float engineRPM;                                     //тахометр, обороты двигателя текущие
     public float wheelsRpm;
     public float maxEngineRpm = 5000f;      //для рассчета мощности
-    public float maxGearBoxRpm = 5000f;     //нужно для коробки передач
+    public float maxGearBoxRpm = 4500f;     //нужно для коробки передач
     public float minGearBoxRpm = 2500f;     //нужно для коробки передач
     public bool reverce;
     public bool forwardIsSlip;
     private float MaxForwardSlipToBlockChangeGear = 0.5f;
+    private float RpmEngineToRpmWheelsLerpSpeed = 15f;
 
     #region Stats
     private float VehicleSpeed;
@@ -131,58 +132,7 @@ public class Controller : MonoBehaviour
         wheels[3] = wheelColliders.transform.GetChild(3).gameObject.GetComponent<WheelCollider>();
     }
 
-    private void MoveVehicle()
-    {
-        float totalDrive;
 
-        if (driveType == DriveType.AllWheelDrive)
-        {
-            for (int i = 0; i < wheels.Length; i++)
-            {                                                   //totalPower/4
-                wheels[i].motorTorque = inputManager.vertical * (totalPower / 4);
-            }
-        }
-        else if (driveType == DriveType.RearWheelDrive)
-        {
-            for (int i = 2; i < wheels.Length; i++)
-            {
-                wheels[i].motorTorque = inputManager.vertical * (totalPower / 2) * Time.fixedTime;
-            }
-        }
-        else if (driveType == DriveType.FrontWheelDrive)
-        {
-            for (int i = 0; i < wheels.Length - 2; i++)
-            {
-                wheels[i].motorTorque = inputManager.vertical * (totalPower / 2);
-            }
-        }
-        KPH = rigidbody.velocity.magnitude * 3.6f;
-
-        if (inputManager.handBrake)
-        {
-            wheels[2].brakeTorque = wheels[3].brakeTorque = breakPower;
-        }
-        else
-        {
-            wheels[2].brakeTorque = wheels[3].brakeTorque = 0;
-        }
-
-        //TODO ТУТ БУЛЕВА ЧТО ЕСЛИ ВПЕРЕД, ТО тормозим 
-        /*if (inputManager.vertical < 0 && !reverce)
-        {
-            foreach (var wheel in wheels)
-            {
-                wheel.brakeTorque = breakPower;
-            }
-        }
-        else
-        {
-            foreach (var wheel in wheels)
-            {
-                wheel.brakeTorque = 0;
-            }
-        }*/
-    }
 
     private void SteerVehicle()
     {
@@ -329,6 +279,17 @@ public class Controller : MonoBehaviour
     private void CalculateEnginePower()
     {
         WheelRPM();
+
+        float rpmTarget = inputManager.vertical > 0 ? maxEngineRpm : minGearBoxRpm;
+        float speed = inputManager.vertical > 0 ? RpmEngineToRpmWheelsLerpSpeed : RpmEngineToRpmWheelsLerpSpeed * 0.2f;
+
+        //Calculate the rpm based on rpm of the wheel and current gear ratio.
+        //float targetRPM = ((minGearBoxRpm + 20) * Gears[gearNum]).Abs ();              //+20 for normal work CutOffRPM
+        //targetRPM = Mathf.Clamp (targetRPM, minGearBoxRpm, maxEngineRpm);
+
+        //EngineRPM = Mathf.Lerp (EngineRPM, targetRPM, RpmEngineToRpmWheelsLerpSpeed * Time.fixedDeltaTime);
+
+
         //totalPower = enginePower.Evaluate(engineRPM) * (Gears[gearNum]) * inputManager.vertical;
         if (inputManager.vertical > 0)
         {
@@ -350,12 +311,38 @@ public class Controller : MonoBehaviour
 
         if (engineRPM >= maxEngineRpm)
         {
-            engineRPM = Mathf.SmoothDamp(engineRPM, maxEngineRpm - 500, ref velocity, 0.05f);
+            engineRPM = Mathf.SmoothDamp(engineRPM, maxEngineRpm - 500, ref velocity, 0.01f);
         }
-        else
+        else if(!forwardIsSlip)
         {
-            engineRPM = Mathf.SmoothDamp(engineRPM, 1000 + (Mathf.Abs(wheelsRpm) * 3.6f * (Gears[gearNum])), ref velocity, smoothTime);      //3,6 это число редуктора моста
+
+            /*float minRPM = 0;
+            for (int i = 0; i < wheels.Length; i++)
+            {
+                minRPM += wheels[i].rpm;
+            }*/
+
+            //minRPM /= 4;
+            engineRPM = Mathf.SmoothDamp(engineRPM, 1000 + (Mathf.Abs(wheelsRpm) * 3.6f * (Gears[gearNum])), ref velocity, smoothTime * Time.fixedDeltaTime);      //3,6 это число редуктора моста
+            /*float targetRPM = (((minRPM + 20) * Gears[gearNum])).Abs();              //+20 for normal work CutOffRPM
+            targetRPM = Mathf.Clamp(targetRPM, minGearBoxRpm, maxEngineRpm);
+            engineRPM = Mathf.Lerp(engineRPM, targetRPM, RpmEngineToRpmWheelsLerpSpeed * Time.fixedDeltaTime);*/
         }
+        if (inputManager.vertical <= 0)
+        {
+            float minRPM = 0;
+            for (int i = 0; i < wheels.Length; i++)
+            {
+                minRPM += wheels[i].rpm;
+            }
+            //targetRPM = Mathf.Clamp(targetRPM, minGearBoxRpm, maxEngineRpm);
+            engineRPM = Mathf.Lerp(1000, engineRPM, RpmEngineToRpmWheelsLerpSpeed * Time.fixedDeltaTime);
+        }
+        if (forwardIsSlip)
+        {
+            engineRPM = Mathf.SmoothDamp(engineRPM, minGearBoxRpm + 100, ref velocity, 0.01f);
+        }
+
     }
 
     private void WheelRPM()
@@ -382,12 +369,10 @@ public class Controller : MonoBehaviour
         {
             if (engineRPM > maxGearBoxRpm && gearNum < Gears.Length - 1 && !forwardIsSlip)
             {
-                //if(ForwardSliding()) return;
                 gearNum++;
             }
             if (engineRPM < minGearBoxRpm && gearNum > 0)
             {
-                //if(ForwardSliding()) return;
                 gearNum--;
             }
         }
@@ -395,12 +380,10 @@ public class Controller : MonoBehaviour
         {
             if (Input.GetKeyDown(KeyCode.E) && gearNum < Gears.Length - 1)
             {
-                //if(ForwardSliding()) return;
                 gearNum++;
             }
             if (Input.GetKeyDown(KeyCode.Q) && gearNum > 0)
             {
-                //if(ForwardSliding()) return;
                 gearNum--;
             }
         }
@@ -450,46 +433,6 @@ public class Controller : MonoBehaviour
         }
     }
 
-
-    private void ForwardSlidingValue()
-    {
-
-    }
-    private void SwitchingTheGearBox()
-    {
-        StartCoroutine(SwitchingTheGearBoxCor());
-    }
-
-    IEnumerator SwitchingTheGearBoxCor()
-    {
-        float switchingBreak = 5000f;
-        float switchngGearBoxTimer = 1f;
-        wheels[2].motorTorque = 0;
-        wheels[3].motorTorque = 0;
-        wheels[2].brakeTorque = switchingBreak;
-        wheels[3].brakeTorque = switchingBreak;
-        yield return new WaitForSeconds(switchngGearBoxTimer);
-        wheels[2].brakeTorque = 0;
-        wheels[3].brakeTorque = 0;
-    }
-
-    private void CrutchesNormalizerRPM()
-    {
-        if (ForwardSliding())
-        {
-            engineRPM = Mathf.Lerp(engineRPM, engineRPM / 2, 0.5f);
-            Debug.Log("СКОЛЬЗИМ ЕБАТЬ");
-        }
-    }
-
-    private bool ForwardSliding()
-    {
-        if (wheels[0].rpm / wheels[2].rpm < 0.85 && wheels[1].rpm / wheels[3].rpm < 0.85)
-            return true;
-        else
-            return false;
-    }
-
     private void GetSpeedGearsValues()
     {
         float[] maxSpeedOnGears = new float[wheels.Length];
@@ -497,5 +440,75 @@ public class Controller : MonoBehaviour
         {
             //здесь рассчитать максимальную скорость на каждой передаче
         }
+    }
+
+
+    private void MoveVehicle()
+    {
+        if(forwardIsSlip)
+        {
+            TryToNormalize();
+            return;
+        }
+        
+
+        if (driveType == DriveType.AllWheelDrive)
+        {
+            for (int i = 0; i < wheels.Length; i++)
+            {                                                   //totalPower/4
+                wheels[i].motorTorque = inputManager.vertical * (totalPower / 4) * Time.fixedDeltaTime;
+            }
+        }
+        else if (driveType == DriveType.RearWheelDrive)
+        {
+            for (int i = 2; i < wheels.Length; i++)
+            {
+                wheels[i].motorTorque = inputManager.vertical * (totalPower / 2) * Time.fixedTime;
+            }
+        }
+        else if (driveType == DriveType.FrontWheelDrive)
+        {
+            for (int i = 0; i < wheels.Length - 2; i++)
+            {
+                wheels[i].motorTorque = inputManager.vertical * (totalPower / 2) * Time.fixedDeltaTime;
+            }
+        }
+        KPH = rigidbody.velocity.magnitude * 3.6f;
+
+        if (inputManager.handBrake)
+        {
+            wheels[2].brakeTorque = wheels[3].brakeTorque = breakPower;
+        }
+        else
+        {
+            wheels[2].brakeTorque = wheels[3].brakeTorque = 0;
+        }
+    }
+    private void TryToNormalize()
+    {
+        /*float maxWheelRPM = Gears[gearNum] * engineRPM;
+				for (int i = 0; i <= wheels.Length; i++)
+				{
+					if (wheels[i].rpm <= maxWheelRPM)
+					{
+						wheels[i].motorTorque = totalPower;
+					}
+					else
+					{
+						wheels[i].motorTorque = 0;
+					}
+				}*/
+        float maxWheelRPM = Gears[gearNum] * engineRPM;
+        for (int i = 0; i < wheels.Length; i++)
+        {
+            if (wheels[i].rpm > maxWheelRPM)
+            {
+                wheels[i].motorTorque = 0;
+            }
+        }
+        Debug.Log("LF " + wheels[0].motorTorque);
+        Debug.Log("RF " + wheels[1].motorTorque);
+        Debug.Log("LB " + wheels[2].motorTorque);
+        Debug.Log("RB " + wheels[3].motorTorque);
     }
 }
